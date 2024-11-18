@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-SignApplication<sign>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.sign.SignApplication",
+            "projectName": "sign",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}
