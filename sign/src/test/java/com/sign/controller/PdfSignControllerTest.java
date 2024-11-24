@@ -75,7 +75,7 @@ class PdfSignControllerTest {
         when(file.getContentType()).thenReturn("image/jpeg");
 
         // chamada ao método
-        ResponseEntity<?> response = pdfSignController.signPdf(file);
+        ResponseEntity<?> response = pdfSignController.signPdf(file, null, null);
 
         // verifica se retornou o status de BAD_REQUEST
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
@@ -87,7 +87,7 @@ class PdfSignControllerTest {
         when(file.isEmpty()).thenReturn(true);
 
         // chamada ao método
-        ResponseEntity<?> response = pdfSignController.signPdf(file);
+        ResponseEntity<?> response = pdfSignController.signPdf(file, null, null);
 
         // verifica se retornou o status de BAD_REQUEST
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
@@ -103,7 +103,7 @@ class PdfSignControllerTest {
         when(fileService.saveTempFile(file)).thenThrow(new IOException("Erro ao salvar o arquivo"));
 
         // chamada ao método
-        ResponseEntity<?> response = pdfSignController.signPdf(file);
+        ResponseEntity<?> response = pdfSignController.signPdf(file, null, null);
 
         // verifica se retornou o status de INTERNAL_SERVER_ERROR
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());

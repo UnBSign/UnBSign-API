@@ -33,7 +33,9 @@ public class PdfSignController {
     }
 
     @PostMapping("/sign")
-    public ResponseEntity<?> signPdf(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<?> signPdf(@RequestParam("file") MultipartFile file,
+                                     @RequestParam(value = "x", required = false) Float x,
+                                     @RequestParam(value = "y", required = false) Float y) {
         if (file.isEmpty() || !file.getContentType().equals("application/pdf")) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Arquivo inválido. Envie um arquivo PDF");
         }
@@ -44,7 +46,7 @@ public class PdfSignController {
 
             //arquivo de saida assinado
             String signedFilePath = fileService.getSignedFilePath(file.getOriginalFilename());
-            PdfSignService.executeSign(tempFilePath, signedFilePath, "Eu, o testador");
+            PdfSignService.executeSign(tempFilePath, signedFilePath, "Eu, o testador", 1f, 50f);
 
             //retorna arquivo assinado
             return responseService.createFileResponse(signedFilePath);
