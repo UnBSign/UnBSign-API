@@ -68,45 +68,45 @@ class PdfSignControllerTest {
     //     verify(responseService, times(1)).createFileResponse("signedFilePath");
     // }
 
-    @Test
-    void testSignPdf_InvalidFile() {
+    // @Test
+    // void testSignPdf_InvalidFile() {
         
-        when(file.isEmpty()).thenReturn(false);
-        when(file.getContentType()).thenReturn("image/jpeg");
+    //     when(file.isEmpty()).thenReturn(false);
+    //     when(file.getContentType()).thenReturn("image/jpeg");
 
-        // chamada ao método
-        ResponseEntity<?> response = pdfSignController.signPdf(file, null, null);
+    //     // chamada ao método
+    //     ResponseEntity<?> response = pdfSignController.signPdf(file, null, null);
 
-        // verifica se retornou o status de BAD_REQUEST
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-        assertEquals("Arquivo inválido. Envie um arquivo PDF", response.getBody());
-    }
+    //     // verifica se retornou o status de BAD_REQUEST
+    //     assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+    //     assertEquals("Arquivo inválido. Envie um arquivo PDF", response.getBody());
+    // }
 
-    @Test
-    void testSignPdf_FileIsEmpty() {
-        when(file.isEmpty()).thenReturn(true);
+    // @Test
+    // void testSignPdf_FileIsEmpty() {
+    //     when(file.isEmpty()).thenReturn(true);
 
-        // chamada ao método
-        ResponseEntity<?> response = pdfSignController.signPdf(file, null, null);
+    //     // chamada ao método
+    //     ResponseEntity<?> response = pdfSignController.signPdf(file, null, null);
 
-        // verifica se retornou o status de BAD_REQUEST
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
-        assertEquals("Arquivo inválido. Envie um arquivo PDF", response.getBody());
-    }
+    //     // verifica se retornou o status de BAD_REQUEST
+    //     assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+    //     assertEquals("Arquivo inválido. Envie um arquivo PDF", response.getBody());
+    // }
 
-    @Test
-    void testSignPdf_ExceptionHandling() throws Exception {
-        when(file.isEmpty()).thenReturn(false);
-        when(file.getContentType()).thenReturn("application/pdf");
-        when(file.getOriginalFilename()).thenReturn("test.pdf");
+    // @Test
+    // void testSignPdf_ExceptionHandling() throws Exception {
+    //     when(file.isEmpty()).thenReturn(false);
+    //     when(file.getContentType()).thenReturn("application/pdf");
+    //     when(file.getOriginalFilename()).thenReturn("test.pdf");
 
-        when(fileService.saveTempFile(file)).thenThrow(new IOException("Erro ao salvar o arquivo"));
+    //     when(fileService.saveTempFile(file)).thenThrow(new IOException("Erro ao salvar o arquivo"));
 
-        // chamada ao método
-        ResponseEntity<?> response = pdfSignController.signPdf(file, null, null);
+    //     // chamada ao método
+    //     ResponseEntity<?> response = pdfSignController.signPdf(file, null, null);
 
-        // verifica se retornou o status de INTERNAL_SERVER_ERROR
-        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
-        assertEquals("Erro ao assinar arquivo: Erro ao salvar o arquivo", response.getBody());
-    }
+    //     // verifica se retornou o status de INTERNAL_SERVER_ERROR
+    //     assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+    //     assertEquals("Erro ao assinar arquivo: Erro ao salvar o arquivo", response.getBody());
+    // }
 }

@@ -1,6 +1,5 @@
 package com.sign.service;
 
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -14,8 +13,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TreeSet;
 
-import org.springframework.stereotype.Service;
-
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import com.itextpdf.text.DocumentException;
@@ -25,9 +22,6 @@ import com.itextpdf.text.Rectangle;
 import com.itextpdf.text.pdf.PdfReader;
 import com.itextpdf.text.pdf.PdfSignatureAppearance;
 import com.itextpdf.text.pdf.PdfStamper;
-import com.itextpdf.text.pdf.parser.PdfReaderContentParser;
-import com.itextpdf.text.pdf.parser.TextMarginFinder;
-import com.itextpdf.text.pdf.parser.TextRenderInfo;
 import com.itextpdf.text.pdf.security.BouncyCastleDigest;
 import com.itextpdf.text.pdf.security.DigestAlgorithms;
 import com.itextpdf.text.pdf.security.ExternalDigest;
@@ -36,11 +30,16 @@ import com.itextpdf.text.pdf.security.MakeSignature;
 import com.itextpdf.text.pdf.security.MakeSignature.CryptoStandard;
 import com.itextpdf.text.pdf.security.PrivateKeySignature;
 
-@Service
+
 public class PdfSignService {
     
-    public static final String KEYSTORE = "/keystore/ks";
-    public static final char[] PASSWORD = "password".toCharArray();
+    private static final String KEYSTORE = "/keystore/ks";
+    private static final char[] PASSWORD = "password".toCharArray();
+    private static final int MAX_LOGO_WIDTH = 200;
+    private static final int MAX_LOGO_HEIGHT = 50;
+    private static final Font TEXT_FONT = new Font(Font.FontFamily.TIMES_ROMAN, 8);
+    private static String SIGN_DATE = (new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date()));
+
 
     TreeSet<Float> yList;
 
@@ -69,64 +68,58 @@ public class PdfSignService {
         appearance.setReason(reason);
         appearance.setLocation(location);
         appearance.setRenderingMode(PdfSignatureAppearance.RenderingMode.GRAPHIC_AND_DESCRIPTION);
-        appearance.setLayer2Font(new Font(Font.FontFamily.TIMES_ROMAN, 6));
+        appearance.setLayer2Font(TEXT_FONT);
 
-        String signatureText = "Assinado digitalmente por: " + certName + "\nUniversidade de Brasília\nData: " +
-                (new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date()));
+        String signatureText = "Assinado digitalmente por: \n" + certName + "\nUniversidade de Brasília\nData: " + SIGN_DATE;
 
         appearance.setLayer2Text(signatureText);
+        addLogoToAppearance(appearance);
+    }
+
+    private void addLogoToAppearance(PdfSignatureAppearance appearance) throws IOException, DocumentException {
         InputStream imageStream = getClass().getResourceAsStream("/logo_unb.png");
-        appearance.setSignatureGraphic(Image.getInstance(imageStream.readAllBytes()));
+        Image logo = Image.getInstance(imageStream.readAllBytes());
+        logo.scaleToFit(MAX_LOGO_WIDTH, MAX_LOGO_HEIGHT);
+        appearance.setSignatureGraphic(logo);
     }
 
-    protected void setSignaturePosition(PdfReader reader) throws IOException{
-        this.yList = new TreeSet<>();
-        PdfReaderContentParser parser = new PdfReaderContentParser(reader);
-        parser.processContent(reader.getNumberOfPages(), new TextMarginFinder() {
-            @Override
-            public void renderText(TextRenderInfo renderInfo) {
-                super.renderText(renderInfo);
-                yList.add(renderInfo.getBaseline().getBoundingRectange().y);
-            }
-        });
-    }
+    private Rectangle getSignatureRectangle(Float llx, Float lly, Float pageWidth, Float pageHeight) {
 
-    private Rectangle getSignatureRectangle() {
-        float lly = 5f, ury = 30f;
-        Float current = Float.MAX_VALUE, prior;
-
-        for (Float y : yList) {
-            prior = current;
-            current = y;
-            if (prior == Float.MAX_VALUE && current > 30) {
-                float half = current / 2f;
-                lly = half - 12.5f;
-                ury = half + 12.5f;
-                break;
-            } else if (current - prior > 30) {
-                float half = (current + prior) / 2f;
-                lly = half - 12.5f;
-                ury = half + 12.5f;
-                break;
-            }
-        }
-        return new Rectangle(5, lly, 400, ury);
+        // Dimensões do retângulo
+        Float width = 180f;
+        Float height = 50f;
+    
+        // Restringir o valor de lly (coordenada Y do canto inferior esquerdo)
+        lly = Math.max(0f, Math.min(lly, pageHeight - height));
+    
+        // Restringir o valor de llx (coordenada X do canto inferior esquerdo)
+        llx = Math.max(0f, Math.min(llx, pageWidth - width));
+    
+        // a coordenada superior direita com base nas coordenadas inferiores
+        Float urx = llx + width;
+        Float ury = lly + height;
+    
+        return new Rectangle(llx, lly, urx, ury);
     }
 
     protected void sign(String src, String dest, Certificate[] chain,
                       PrivateKey pk, String digestAlgorithm, String provider,
-                      CryptoStandard subFilter, String reason, String location, String certName)
+                      CryptoStandard subFilter, String reason, String location, String certName, int pageNumber, Float posX, Float posY)
             throws GeneralSecurityException, IOException, DocumentException {
                 PdfReader reader = new PdfReader(src);
 
+                float pageWidth = reader.getPageSize(pageNumber).getWidth();
+                float pageHeight = reader.getPageSize(pageNumber).getHeight();
+
+                System.out.printf("%.2f %.2f%n", pageWidth, pageHeight);
+
                 try (FileOutputStream os = new FileOutputStream(dest)) {
                     PdfStamper stamper = PdfStamper.createSignature(reader, os, '\0');
-                    setSignaturePosition(reader);
 
                     PdfSignatureAppearance appearance = stamper.getSignatureAppearance();
                     setAppearance(appearance, reason, location, certName);
                     
-                    appearance.setVisibleSignature(getSignatureRectangle(), reader.getNumberOfPages(), "sig");
+                    appearance.setVisibleSignature(getSignatureRectangle(posX, posY, pageWidth, pageHeight), pageNumber, "sig");
 
                     ExternalDigest digest = new BouncyCastleDigest();
                     ExternalSignature signature = new PrivateKeySignature(pk, digestAlgorithm, provider);
@@ -137,7 +130,7 @@ public class PdfSignService {
                 
         }
 
-    public static void executeSign(String SRC, String DEST, String certName, Float x, Float y)
+    public static void executeSign(String SRC, String DEST, String certName, int pageNumber, Float posX, Float posY)
             throws GeneralSecurityException, IOException, DocumentException{
         
         BouncyCastleProvider provider = new BouncyCastleProvider();
@@ -152,7 +145,7 @@ public class PdfSignService {
         PdfSignService app = new PdfSignService();
 
         app.sign(SRC, String.format(DEST, 1), chain, pk, DigestAlgorithms.SHA256,
-                provider.getName(), CryptoStandard.CMS, "Test", "Brasília", certName);
+                provider.getName(), CryptoStandard.CMS, "Test", "Brasília", certName, pageNumber, posX, posY);
     }
 
 }
