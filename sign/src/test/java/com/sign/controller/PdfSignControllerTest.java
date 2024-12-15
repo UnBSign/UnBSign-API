@@ -26,7 +26,7 @@ import com.sign.service.ResponseService;
 class PdfSignControllerTest {
 
     @InjectMocks
-    private PdfSignController pdfSignController;
+    private PdfController pdfSignController;
 
     @Mock
     private FileService fileService;
