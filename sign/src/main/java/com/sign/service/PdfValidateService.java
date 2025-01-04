@@ -8,12 +8,17 @@ import java.security.KeyFactory;
 import java.security.MessageDigest;
 import java.security.PublicKey;
 import java.security.Signature;
+import java.security.cert.X509Certificate;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Date;
+import java.util.List;
 
 
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -39,10 +44,15 @@ public class PdfValidateService{
 
     Logger logApp=LoggerFactory.getLogger(PdfValidateService.class);
     
-    static {
-        System.setProperty("org.slf4j.simpleLogger.log.com.teste", "debug");
-        System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "debug");
-        System.setProperty("org.slf4j.simpleLogger.logFile", "./pdf-validation-logs.txt");
+    private String getCNFromCertificate(X509CertificateHolder certificateHolder) {
+        String subjectDN = certificateHolder.getSubject().toString();
+        String[] parts = subjectDN.split(",");
+        for (String part : parts) {
+            if (part.trim().startsWith("CN=")) {
+                return part.trim().substring(3);
+            }
+        }
+        return "Sem CN";
     }
 
     private  byte[] getByteRangeData(ByteArrayInputStream bis,int[] byteRange)    {
@@ -57,35 +67,39 @@ public class PdfValidateService{
 
     }
 
-    public boolean validateSignature(String filePath) throws IOException {
+    public List<Map<String, Object>> validateSignature(String filePath) throws IOException {
         PDDocument pdfDoc = null;
-        Map<PDSignature, Boolean> signatureResults = new HashMap<>();
+        List<Map<String, Object>> signatureInfos = new ArrayList<>();
         try {
             ByteArrayInputStream pdfBytes = new ByteArrayInputStream(
                     Files.readAllBytes(Paths.get(filePath)));
 
             pdfDoc = PDDocument.load(new File(filePath));
 
-            pdfDoc.getSignatureDictionaries().forEach(a -> {
+            pdfDoc.getSignatureDictionaries().forEach(signature -> {
                 try {
-                    boolean isValid = processSignature(a, pdfBytes);
-                    signatureResults.put(a, isValid);
+                    Map<String, Object> signatureInfo = processSignature(signature, pdfBytes);
+                    if (signatureInfo != null) {
+                        signatureInfos.add(signatureInfo);
+                    }
+                    
                 } catch (Exception e) {
                     logApp.error("Error processing Signature", e);
-                    signatureResults.put(a, false);  // Considerar erro como assinatura inválida.
+                    signatureInfos.add(Collections.singletonMap("Signature ID", false));
                 }
             });
 
             pdfBytes.close();
             
         } finally {
-            pdfDoc.close();
+            if (pdfDoc != null) {
+                pdfDoc.close();
+            }
         }
-
-        return signatureResults.values().stream().allMatch(Boolean::booleanValue);
+        return signatureInfos;
     }
 
-    private boolean processSignature(PDSignature signature,
+    private Map<String, Object> processSignature(PDSignature signature,
             ByteArrayInputStream pdfBytes) throws Exception {
         byte[] contentToSigned=getByteRangeData(pdfBytes, signature.getByteRange());
         String filter=signature.getFilter();
@@ -151,9 +165,16 @@ public class PdfValidateService{
         Collection<X509CertificateHolder> matches = signedData.getCertificates().getMatches(signerInfo.getSID());
         byte[] pubByte=matches.iterator().next().getSubjectPublicKeyInfo().getEncoded();
 
+        X509CertificateHolder certHolder = matches.iterator().next();
+        String cn = getCNFromCertificate(certHolder);
+
+        logApp.info("Certificate CN: {}", cn);
+
         X509EncodedKeySpec keySpec=new X509EncodedKeySpec(pubByte);
         KeyFactory kf = KeyFactory.getInstance("RSA");
         PublicKey pubKey=kf.generatePublic(keySpec);
+        String serialNumber = certHolder.getSerialNumber().toString(16);
+        Date signingDate = certHolder.getNotBefore();
 
         //Check signature
         String encAlgo=null;
@@ -197,14 +218,23 @@ public class PdfValidateService{
         logApp.info("Message Digest Signature ID {} in CMS:{}",signatureSID,messageDigest);
         logApp.info("Message Digest Signature ID {} in PDF:{}",signatureSID,mdPdf);
 
+        Map<String, Object> signatureData = new HashMap<>();
+
         if(mdPdf.equals(messageDigest)) {
             logApp.info("Message Digest Signature ID {} is valid, data integrity is OK",signatureSID);
-            return true;
+            signatureData.put("SignatureID", signatureSID);
+            signatureData.put("CN", cn);
+            signatureData.put("SerialNumber", serialNumber);
+            signatureData.put("SigningDate", signingDate);
+            signatureData.put("Integrity", true);
         }
         else    {
             logApp.info("Message Digest Signature ID {} is invalid, data integrity is NOT OK",signatureSID);
-            return false;
+            signatureData.put("Signature ID", signatureSID);
+            signatureData.put("Integrity", false);
         }
+
+        return signatureData;
 
     }
 }

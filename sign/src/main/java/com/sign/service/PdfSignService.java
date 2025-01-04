@@ -12,6 +12,7 @@ import java.security.cert.X509Certificate;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TreeSet;
+import java.util.List;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
@@ -19,6 +20,7 @@ import com.itextpdf.text.DocumentException;
 import com.itextpdf.text.Font;
 import com.itextpdf.text.Image;
 import com.itextpdf.text.Rectangle;
+import com.itextpdf.text.pdf.AcroFields;
 import com.itextpdf.text.pdf.PdfReader;
 import com.itextpdf.text.pdf.PdfSignatureAppearance;
 import com.itextpdf.text.pdf.PdfStamper;
@@ -29,6 +31,7 @@ import com.itextpdf.text.pdf.security.ExternalSignature;
 import com.itextpdf.text.pdf.security.MakeSignature;
 import com.itextpdf.text.pdf.security.MakeSignature.CryptoStandard;
 import com.itextpdf.text.pdf.security.PrivateKeySignature;
+import com.itextpdf.text.pdf.AcroFields;
 
 
 public class PdfSignService {
@@ -102,6 +105,25 @@ public class PdfSignService {
         return new Rectangle(llx, lly, urx, ury);
     }
 
+    protected String getNextSignatureFieldName(PdfReader reader) throws IOException {
+        AcroFields acroFields = reader.getAcroFields();
+        List<String> signatureNames = acroFields.getSignatureNames();
+        
+        int maxIndex = 0;
+        for (String name : signatureNames) {
+            if (name.startsWith("sig")) {
+                try {
+                    int index = Integer.parseInt(name.substring(3));
+                    maxIndex = Math.max(maxIndex, index);
+                } catch (NumberFormatException e) {
+                    
+                }
+            }
+        }
+        
+        return "sig" + (maxIndex + 1);
+    }
+
     protected void sign(String src, String dest, Certificate[] chain,
                       PrivateKey pk, String digestAlgorithm, String provider,
                       CryptoStandard subFilter, String reason, String location, String certName, int pageNumber, Float posX, Float posY)
@@ -111,15 +133,14 @@ public class PdfSignService {
                 float pageWidth = reader.getPageSize(pageNumber).getWidth();
                 float pageHeight = reader.getPageSize(pageNumber).getHeight();
 
-                System.out.printf("%.2f %.2f%n", pageWidth, pageHeight);
-
                 try (FileOutputStream os = new FileOutputStream(dest)) {
-                    PdfStamper stamper = PdfStamper.createSignature(reader, os, '\0');
+                    PdfStamper stamper = PdfStamper.createSignature(reader, os, '\0', null, true);
 
                     PdfSignatureAppearance appearance = stamper.getSignatureAppearance();
                     setAppearance(appearance, reason, location, certName);
-                    
-                    appearance.setVisibleSignature(getSignatureRectangle(posX, posY, pageWidth, pageHeight), pageNumber, "sig");
+
+                    String signatureFieldName = getNextSignatureFieldName(reader);
+                    appearance.setVisibleSignature(getSignatureRectangle(posX, posY, pageWidth, pageHeight), pageNumber, signatureFieldName);
 
                     ExternalDigest digest = new BouncyCastleDigest();
                     ExternalSignature signature = new PrivateKeySignature(pk, digestAlgorithm, provider);
@@ -135,8 +156,13 @@ public class PdfSignService {
         
         BouncyCastleProvider provider = new BouncyCastleProvider();
         Security.addProvider(provider);
+        PdfSignService pdfSignService = new PdfSignService();
 
-        KeyStore ks = new PdfSignService().loadKeyStore();
+        KeyStore ks = pdfSignService.loadKeyStore();
+        
+        X509Certificate cert = (X509Certificate) ks.getCertificate("signing_key_cert");
+
+        certName = pdfSignService.getCNFromX509Certificate(cert);
 
         String alias = ks.aliases().nextElement();
         PrivateKey pk = (PrivateKey) ks.getKey(alias, PASSWORD);

@@ -3,6 +3,7 @@ package com.sign.controller;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.Map;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -19,9 +20,6 @@ import com.sign.service.FileService;
 import com.sign.service.PdfSignService;
 import com.sign.service.ResponseService;
 import com.sign.service.PdfValidateService;
-import org.springframework.web.bind.annotation.RequestBody;
-
-
 
 
 @RestController
@@ -69,10 +67,12 @@ public class PdfController {
             String tempFilePath = fileService.saveTempFile(file);
             PdfValidateService service = new PdfValidateService();
 
-            boolean isValid = service.validateSignature(tempFilePath);
+            List<Map<String, Object>> signaturesResults = service.validateSignature(tempFilePath);
+        
+            boolean allValid = signaturesResults.stream().allMatch(result -> (boolean) result.get("Integrity"));
             
-            if (isValid) {
-                return ResponseEntity.ok(Map.of("success", true, "message", "The PDF signature is valid."));
+            if (allValid) {
+                return ResponseEntity.ok(Map.of("success", true, "signatures", signaturesResults));
             } else {
                 return ResponseEntity.ok(Map.of("success", false, "message", "The PDF signature is invalid."));
             }
