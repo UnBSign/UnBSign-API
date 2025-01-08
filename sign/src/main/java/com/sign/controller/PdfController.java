@@ -3,6 +3,7 @@ package com.sign.controller;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.Map;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -18,31 +19,28 @@ import com.itextpdf.text.DocumentException;
 import com.sign.service.FileService;
 import com.sign.service.PdfSignService;
 import com.sign.service.ResponseService;
-
+import com.sign.service.PdfValidateService;
 
 
 @RestController
 @RequestMapping("/api/pdf")
-@CrossOrigin(origins = "http://127.0.0.1:8000")
-public class PdfSignController {
+public class PdfController {
 
     private final FileService fileService;
     private final ResponseService responseService;
 
     @Autowired
-    public PdfSignController(FileService fileService, ResponseService responseService) {
+    public PdfController(FileService fileService, ResponseService responseService) {
         this.fileService = fileService;
         this.responseService = responseService;
     }
 
-    @PostMapping("/sign")
+    @PostMapping("/signature")
     public ResponseEntity<?> signPdf(@RequestParam("file") MultipartFile file,
                                      @RequestParam(value = "posX", required = false) Float posX,
                                      @RequestParam(value = "posY", required = false) Float posY,
                                      @RequestParam(value = "pageNumber", required =  false) int pageNumber) {
-        if (file.isEmpty() || !file.getContentType().equals("application/pdf")) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid file, upload a PDF file");
-        }
+        validateUploadedFile(file);
 
         try {
             //salva pdf temporiaramente
@@ -60,5 +58,40 @@ public class PdfSignController {
             return ResponseEntity.internalServerError().body("Error to sign file: " + e.getMessage());
         }
     }
+
+    @PostMapping("/validation")
+    public ResponseEntity<?> postMethodName(@RequestParam("file") MultipartFile file) {
+        validateUploadedFile(file);
+
+        try {
+            String tempFilePath = fileService.saveTempFile(file);
+            PdfValidateService service = new PdfValidateService();
+
+            List<Map<String, Object>> signaturesResults = service.validateSignature(tempFilePath);
+        
+            boolean allValid = signaturesResults.stream().allMatch(result -> (boolean) result.get("Integrity"));
+            
+            if (allValid) {
+                return ResponseEntity.ok(Map.of("success", true, "signatures", signaturesResults));
+            } else {
+                return ResponseEntity.ok(Map.of("success", false, "message", "The PDF signature is invalid."));
+            }
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().body("Error validating file: " + e.getMessage());
+        }
+    }
+
+    private ResponseEntity<?> validateUploadedFile (MultipartFile file){
+        if (file == null || file.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("File is missing or empty");
+        }
+
+        if (!"application/pdf".equals(file.getContentType())){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid file type, only PDF files are supported");
+        }
+
+        return null;
+    }
+    
 }
 

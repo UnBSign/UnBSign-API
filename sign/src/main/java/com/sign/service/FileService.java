@@ -26,7 +26,6 @@ public class FileService {
         String extension = "";
 
         int separator = fileName.lastIndexOf('.');
-        System.out.println(fileName);
 
         if (separator > 0 && separator < fileName.length() - 1) {
             extension = fileName.substring(separator);
