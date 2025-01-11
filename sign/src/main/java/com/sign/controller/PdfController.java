@@ -8,8 +8,9 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -20,6 +21,7 @@ import com.sign.service.FileService;
 import com.sign.service.PdfSignService;
 import com.sign.service.ResponseService;
 import com.sign.service.PdfValidateService;
+import com.sign.dto.SignPdfRequest;
 
 
 @RestController
@@ -29,38 +31,42 @@ public class PdfController {
     private final FileService fileService;
     private final ResponseService responseService;
 
-    @Autowired
     public PdfController(FileService fileService, ResponseService responseService) {
         this.fileService = fileService;
         this.responseService = responseService;
     }
 
     @PostMapping("/signature")
-    public ResponseEntity<?> signPdf(@RequestParam("file") MultipartFile file,
-                                     @RequestParam(value = "posX", required = false) Float posX,
-                                     @RequestParam(value = "posY", required = false) Float posY,
-                                     @RequestParam(value = "pageNumber", required =  false) int pageNumber) {
+    public ResponseEntity<?> signPdf(@ModelAttribute SignPdfRequest request) {
+        MultipartFile file = request.getFile();
+        Float posX = request.getPosX();
+        Float posY = request.getPosY();
+        int pageNumber = request.getPageNumber();
+        
+        
         validateUploadedFile(file);
 
         try {
-            //salva pdf temporiaramente
             String tempFilePath = fileService.saveTempFile(file);
 
-            //arquivo de saida assinado
             String signedFilePath = fileService.getSignedFilePath(file.getOriginalFilename());
             PdfSignService.executeSign(tempFilePath, signedFilePath, "Eu, o testador", pageNumber, posX, posY);
 
-            //retorna arquivo assinado
             return responseService.createFileResponse(signedFilePath);
 
-
+        } catch(IllegalArgumentException e){ 
+            return ResponseEntity.badRequest().body(e.getMessage());
         } catch (IOException | GeneralSecurityException | DocumentException e) {
+            if (e.getMessage().equals("User Certificate Not Found")) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Certificado do usuário não encontrado");
+            }
             return ResponseEntity.internalServerError().body("Error to sign file: " + e.getMessage());
         }
     }
 
     @PostMapping("/validation")
-    public ResponseEntity<?> postMethodName(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<?> validatePdfSignature(@ModelAttribute SignPdfRequest request) {
+        MultipartFile file = request.getFile();
         validateUploadedFile(file);
 
         try {
@@ -69,13 +75,10 @@ public class PdfController {
 
             List<Map<String, Object>> signaturesResults = service.validateSignature(tempFilePath);
         
-            boolean allValid = signaturesResults.stream().allMatch(result -> (boolean) result.get("Integrity"));
-            
-            if (allValid) {
-                return ResponseEntity.ok(Map.of("success", true, "signatures", signaturesResults));
-            } else {
-                return ResponseEntity.ok(Map.of("success", false, "message", "The PDF signature is invalid."));
-            }
+            return responseService.createValidationResponse(signaturesResults);
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         } catch (IOException e) {
             return ResponseEntity.internalServerError().body("Error validating file: " + e.getMessage());
         }

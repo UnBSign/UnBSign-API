@@ -31,7 +31,6 @@ import com.itextpdf.text.pdf.security.ExternalSignature;
 import com.itextpdf.text.pdf.security.MakeSignature;
 import com.itextpdf.text.pdf.security.MakeSignature.CryptoStandard;
 import com.itextpdf.text.pdf.security.PrivateKeySignature;
-import com.itextpdf.text.pdf.AcroFields;
 
 
 public class PdfSignService {
@@ -161,6 +160,10 @@ public class PdfSignService {
         KeyStore ks = pdfSignService.loadKeyStore();
         
         X509Certificate cert = (X509Certificate) ks.getCertificate("signing_key_cert");
+
+        if(cert == null){
+            throw new GeneralSecurityException("User Certificate Not Found");
+        }
 
         certName = pdfSignService.getCNFromX509Certificate(cert);
 

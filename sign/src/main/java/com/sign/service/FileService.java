@@ -1,17 +1,14 @@
 package com.sign.service;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.Base64;
 
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class FileService {
-    // salva arquivo temporariamente
     public String saveTempFile(MultipartFile file) throws IOException {
         File tempFile = File.createTempFile("uploaded-", ".pdf");
         try (FileOutputStream fos = new FileOutputStream(tempFile)) {
@@ -20,7 +17,6 @@ public class FileService {
         return tempFile.getAbsolutePath();
     }
 
-    //caminho do arquivo assinado
     public String getSignedFilePath(String fileName) {
 
         String extension = "";

@@ -3,6 +3,8 @@ package com.sign.service;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Map;
+import java.util.List;
 
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
@@ -34,6 +36,17 @@ public class ResponseService {
         // headers.add("Access-Control-Allow-Origin", "*");
         return ResponseEntity.ok().headers(headers)
                 .body(resource);
+    }
+
+    public ResponseEntity<Map<String, Object>> createValidationResponse(List<Map<String, Object>> signaturesResults) {
+        boolean allValid = signaturesResults.stream().allMatch(result -> (boolean) result.get("Integrity"));
+
+        Map<String, Object> response = Map.of(
+            "success", allValid,
+            "signatures", signaturesResults
+        );
+
+        return ResponseEntity.ok(response);
     }
 }
 
