@@ -12,7 +12,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.security.*;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.Enumeration;
+import java.util.List;
 
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
@@ -37,7 +40,7 @@ public class CertificateService {
             KeyStore ks = loadKeyStore();
             ks.setKeyEntry(id, keyPair.getPrivate(), PASSWORD, new java.security.cert.Certificate[]{certificate});
 
-            try (FileOutputStream fos = new FileOutputStream("/home/sidney/Documentos/UnB/UNBSIGN/UnBSign-API/sign/src/main/resources/keystore/ks")) {
+            try (FileOutputStream fos = new FileOutputStream(KEYSTORE)) {
                 ks.store(fos, PASSWORD);
             }
         } catch (Exception e) {
@@ -47,7 +50,7 @@ public class CertificateService {
 
     protected KeyStore loadKeyStore() throws IOException, GeneralSecurityException {
         KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
-        try(InputStream ksStream = PdfSignService.class.getResourceAsStream(KEYSTORE)) {
+        try(InputStream ksStream = getClass().getResourceAsStream(KEYSTORE)) {
             if (ksStream == null) {
                 throw new IOException("key store not found!");
             }
@@ -91,5 +94,29 @@ public class CertificateService {
 
         return certificate;
 
+    }
+
+    public void deleteAllCertificates() {
+        try {
+            KeyStore ks = loadKeyStore();
+            List<String> aliasesToDelete = new ArrayList<>();
+            Enumeration<String> aliases = ks.aliases();
+            
+            while (aliases.hasMoreElements()) {
+                String alias = aliases.nextElement();
+                aliasesToDelete.add(alias);
+            }
+
+            for (String alias : aliasesToDelete) {
+                ks.deleteEntry(alias);
+            }
+
+            try (FileOutputStream fos = new FileOutputStream(KEYSTORE)) {
+                ks.store(fos, PASSWORD);
+            } 
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Failed to delete certificates from keystore", e);
+        }
     }
 }

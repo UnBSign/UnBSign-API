@@ -24,6 +24,9 @@ import com.itextpdf.text.pdf.AcroFields;
 import com.itextpdf.text.pdf.PdfReader;
 import com.itextpdf.text.pdf.PdfSignatureAppearance;
 import com.itextpdf.text.pdf.PdfStamper;
+import com.itextpdf.text.pdf.parser.PdfReaderContentParser;
+import com.itextpdf.text.pdf.parser.TextMarginFinder;
+import com.itextpdf.text.pdf.parser.TextRenderInfo;
 import com.itextpdf.text.pdf.security.BouncyCastleDigest;
 import com.itextpdf.text.pdf.security.DigestAlgorithms;
 import com.itextpdf.text.pdf.security.ExternalDigest;
@@ -42,7 +45,6 @@ public class PdfSignService {
     private static final Font TEXT_FONT = new Font(Font.FontFamily.TIMES_ROMAN, 8);
     private static String SIGN_DATE = (new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date()));
 
-
     TreeSet<Float> yList;
 
     protected String getCNFromX509Certificate(X509Certificate cert) {
@@ -56,7 +58,7 @@ public class PdfSignService {
 
     protected KeyStore loadKeyStore() throws IOException, GeneralSecurityException {
         KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
-        try(InputStream ksStream = PdfSignService.class.getResourceAsStream(KEYSTORE)) {
+        try(InputStream ksStream = getClass().getResourceAsStream(KEYSTORE)) {
             if (ksStream == null) {
                 throw new IOException("key store not found!");
             }
@@ -87,6 +89,10 @@ public class PdfSignService {
 
     private Rectangle getSignatureRectangle(Float llx, Float lly, Float pageWidth, Float pageHeight) {
 
+        if (llx == null || lly == null) {
+            return setDefaultSignatureRectangle();
+        }
+
         // Dimensões do retângulo
         Float width = 180f;
         Float height = 50f;
@@ -102,6 +108,40 @@ public class PdfSignService {
         Float ury = lly + height;
     
         return new Rectangle(llx, lly, urx, ury);
+    }
+
+    private Rectangle setDefaultSignatureRectangle() {
+        float lly = 5f, ury = 30f;
+        Float current = Float.MAX_VALUE, prior;
+    
+        for (Float y : yList) {
+            prior = current;
+            current = y;
+            if (prior == Float.MAX_VALUE && current > 30) {
+                float half = current / 2f;
+                lly = half - 12.5f;
+                ury = half + 12.5f;
+                break;
+            } else if (current - prior > 30) {
+                float half = (current + prior) / 2f;
+                lly = half - 12.5f;
+                ury = half + 12.5f;
+                break;
+            }
+        }
+        return new Rectangle(5, lly, 400, ury);
+    } 
+
+    protected void setSignaturePosition(PdfReader reader) throws IOException{
+        this.yList = new TreeSet<>();
+        PdfReaderContentParser parser = new PdfReaderContentParser(reader);
+        parser.processContent(reader.getNumberOfPages(), new TextMarginFinder() {
+            @Override
+            public void renderText(TextRenderInfo renderInfo) {
+                super.renderText(renderInfo);
+                yList.add(renderInfo.getBaseline().getBoundingRectange().y);
+            }
+        });
     }
 
     protected String getNextSignatureFieldName(PdfReader reader) throws IOException {
@@ -125,9 +165,13 @@ public class PdfSignService {
 
     protected void sign(String src, String dest, Certificate[] chain,
                       PrivateKey pk, String digestAlgorithm, String provider,
-                      CryptoStandard subFilter, String reason, String location, String certName, int pageNumber, Float posX, Float posY)
+                      CryptoStandard subFilter, String reason, String location, String certName, Integer pageNumber, Float posX, Float posY)
             throws GeneralSecurityException, IOException, DocumentException {
                 PdfReader reader = new PdfReader(src);
+                
+                if (pageNumber == 0) {
+                    pageNumber = reader.getNumberOfPages();
+                }
 
                 float pageWidth = reader.getPageSize(pageNumber).getWidth();
                 float pageHeight = reader.getPageSize(pageNumber).getHeight();
@@ -139,7 +183,13 @@ public class PdfSignService {
                     setAppearance(appearance, reason, location, certName);
 
                     String signatureFieldName = getNextSignatureFieldName(reader);
-                    appearance.setVisibleSignature(getSignatureRectangle(posX, posY, pageWidth, pageHeight), pageNumber, signatureFieldName);
+
+                    if (posX == null || posY == null) {
+                        setSignaturePosition(reader);
+                        appearance.setVisibleSignature(setDefaultSignatureRectangle(), pageNumber, signatureFieldName);
+                    } else {
+                        appearance.setVisibleSignature(getSignatureRectangle(posX, posY, pageWidth, pageHeight), pageNumber, signatureFieldName);
+                    }
 
                     ExternalDigest digest = new BouncyCastleDigest();
                     ExternalSignature signature = new PrivateKeySignature(pk, digestAlgorithm, provider);
@@ -159,13 +209,13 @@ public class PdfSignService {
 
         KeyStore ks = pdfSignService.loadKeyStore();
         
-        X509Certificate cert = (X509Certificate) ks.getCertificate("signing_key_cert");
+        // X509Certificate cert = (X509Certificate) ks.getCertificate("signing_key_cert");
 
-        if(cert == null){
-            throw new GeneralSecurityException("User Certificate Not Found");
-        }
+        // if(cert == null){
+        //     throw new GeneralSecurityException("User Certificate Not Found");
+        // }
 
-        certName = pdfSignService.getCNFromX509Certificate(cert);
+        // certName = pdfSignService.getCNFromX509Certificate(cert);
 
         String alias = ks.aliases().nextElement();
         PrivateKey pk = (PrivateKey) ks.getKey(alias, PASSWORD);
