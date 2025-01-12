@@ -5,6 +5,7 @@ import java.security.GeneralSecurityException;
 import java.util.Map;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -17,7 +18,7 @@ import com.itextpdf.text.DocumentException;
 import com.sign.service.FileService;
 import com.sign.service.PdfSignService;
 import com.sign.service.ResponseService;
-import com.sign.service.PdfValidateService;
+import com.sign.service.PdfValidateSignService;
 import com.sign.dto.SignPdfRequest;
 
 
@@ -25,12 +26,15 @@ import com.sign.dto.SignPdfRequest;
 @RequestMapping("/api/pdf")
 public class PdfController {
 
+    @Autowired
     private final FileService fileService;
     private final ResponseService responseService;
+    private final PdfSignService pdfSignService;
 
-    public PdfController(FileService fileService, ResponseService responseService) {
+    public PdfController(FileService fileService, ResponseService responseService, PdfSignService pdfSignService) {
         this.fileService = fileService;
         this.responseService = responseService;
+        this.pdfSignService = pdfSignService;
     }
 
     @PostMapping("/signature")
@@ -39,6 +43,7 @@ public class PdfController {
         Float posX = request.getPosX();
         Float posY = request.getPosY();
         int pageNumber = request.getPageNumber();
+        String id = request.getId();
         
         
         validateUploadedFile(file);
@@ -47,7 +52,7 @@ public class PdfController {
             String tempFilePath = fileService.saveTempFile(file);
 
             String signedFilePath = fileService.getSignedFilePath(file.getOriginalFilename());
-            PdfSignService.executeSign(tempFilePath, signedFilePath, "Eu, o testador", pageNumber, posX, posY);
+            pdfSignService.executeSign(tempFilePath, signedFilePath, id, pageNumber, posX, posY);
 
             return responseService.createFileResponse(signedFilePath);
 
@@ -68,7 +73,7 @@ public class PdfController {
 
         try {
             String tempFilePath = fileService.saveTempFile(file);
-            PdfValidateService service = new PdfValidateService();
+            PdfValidateSignService service = new PdfValidateSignService();
 
             List<Map<String, Object>> signaturesResults = service.validateSignature(tempFilePath);
         

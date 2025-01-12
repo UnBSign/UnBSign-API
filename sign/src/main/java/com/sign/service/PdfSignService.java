@@ -34,11 +34,13 @@ import com.itextpdf.text.pdf.security.ExternalSignature;
 import com.itextpdf.text.pdf.security.MakeSignature;
 import com.itextpdf.text.pdf.security.MakeSignature.CryptoStandard;
 import com.itextpdf.text.pdf.security.PrivateKeySignature;
+import org.springframework.stereotype.Service;
 
+import com.sign.security.KeyStoreManager;
 
+@Service
 public class PdfSignService {
     
-    private static final String KEYSTORE = "/keystore/ks";
     private static final char[] PASSWORD = "password".toCharArray();
     private static final int MAX_LOGO_WIDTH = 200;
     private static final int MAX_LOGO_HEIGHT = 50;
@@ -47,6 +49,12 @@ public class PdfSignService {
 
     TreeSet<Float> yList;
 
+    private final KeyStoreManager ksManager;
+
+    public PdfSignService(KeyStoreManager ksManager) {
+        this.ksManager = ksManager;
+    }
+
     protected String getCNFromX509Certificate(X509Certificate cert) {
         String subjectDN = cert.getSubjectX500Principal().getName();
         String[] parts = subjectDN.split(",");
@@ -54,18 +62,6 @@ public class PdfSignService {
             if(part.startsWith("CN=")) return part.substring(3);
         }
         return "Sem CN";
-    }
-
-    protected KeyStore loadKeyStore() throws IOException, GeneralSecurityException {
-        KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
-        try(InputStream ksStream = getClass().getResourceAsStream(KEYSTORE)) {
-            if (ksStream == null) {
-                throw new IOException("key store not found!");
-            }
-            ks.load(ksStream, PASSWORD);
-        }
-
-        return ks;
     }
 
     protected void setAppearance(PdfSignatureAppearance appearance, String reason, String location, String certName) throws IOException, DocumentException {
@@ -200,30 +196,27 @@ public class PdfSignService {
                 
         }
 
-    public static void executeSign(String SRC, String DEST, String certName, int pageNumber, Float posX, Float posY)
+    public void executeSign(String SRC, String DEST, String id, int pageNumber, Float posX, Float posY)
             throws GeneralSecurityException, IOException, DocumentException{
         
         BouncyCastleProvider provider = new BouncyCastleProvider();
         Security.addProvider(provider);
-        PdfSignService pdfSignService = new PdfSignService();
 
-        KeyStore ks = pdfSignService.loadKeyStore();
+        KeyStore ks = ksManager.loadKeyStore();
         
-        // X509Certificate cert = (X509Certificate) ks.getCertificate("signing_key_cert");
+        String alias = id + "_cert";
+        X509Certificate cert = (X509Certificate) ks.getCertificate(alias);
 
-        // if(cert == null){
-        //     throw new GeneralSecurityException("User Certificate Not Found");
-        // }
+        if(cert == null){
+            throw new GeneralSecurityException("User Certificate Not Found");
+        }
 
-        // certName = pdfSignService.getCNFromX509Certificate(cert);
+        String certName = getCNFromX509Certificate(cert);
 
-        String alias = ks.aliases().nextElement();
         PrivateKey pk = (PrivateKey) ks.getKey(alias, PASSWORD);
         Certificate[] chain = ks.getCertificateChain(alias);
 
-        PdfSignService app = new PdfSignService();
-
-        app.sign(SRC, String.format(DEST, 1), chain, pk, DigestAlgorithms.SHA256,
+        sign(SRC, String.format(DEST, 1), chain, pk, DigestAlgorithms.SHA256,
                 provider.getName(), CryptoStandard.CMS, "Test", "Brasília", certName, pageNumber, posX, posY);
     }
 

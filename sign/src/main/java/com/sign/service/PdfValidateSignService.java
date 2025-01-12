@@ -37,11 +37,11 @@ import java.io.IOException;
 import org.springframework.stereotype.Service;
 
 @Service
-public class PdfValidateService{
+public class PdfValidateSignService{
 
     File pdfFile;
 
-    Logger logApp=LoggerFactory.getLogger(PdfValidateService.class);
+    Logger logApp=LoggerFactory.getLogger(PdfValidateSignService.class);
     
     private String getCNFromCertificate(X509CertificateHolder certificateHolder) {
         String subjectDN = certificateHolder.getSubject().toString();

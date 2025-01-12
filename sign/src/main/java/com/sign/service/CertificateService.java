@@ -7,57 +7,50 @@ import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.springframework.stereotype.Service;
 
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.FileOutputStream;
 import java.security.*;
 import java.security.cert.X509Certificate;
+import java.security.cert.Certificate;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.List;
-
+import java.util.Base64;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
-
+import com.sign.security.KeyStoreManager;
 import java.math.BigInteger;
 
-// import sun.security.x509.*;
 @Service
 public class CertificateService {
 
+    private final KeyStoreManager ksManager;
     private static final String KEYSTORE = "/keystore/ks";
     private static final char[] PASSWORD = "password".toCharArray();
 
+    public CertificateService(KeyStoreManager ksManager) {
+        this.ksManager = ksManager;
+    }
+
     public void createAndStoreCertificate(String id, String cn){
+
         try {
             KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
             keyGen.initialize(2048);
             KeyPair keyPair = keyGen.generateKeyPair();
 
             X509Certificate certificate = generateSelfSignedCertificate(keyPair, cn);
+            System.out.println(certificate);
+            KeyStore ks = ksManager.loadKeyStore();
+            
+            ks.setKeyEntry(id + "_cert", keyPair.getPrivate(), PASSWORD, new java.security.cert.Certificate[]{certificate});
+            ksManager.storeKeyStore(ks);
 
-            KeyStore ks = loadKeyStore();
-            ks.setKeyEntry(id, keyPair.getPrivate(), PASSWORD, new java.security.cert.Certificate[]{certificate});
-
-            try (FileOutputStream fos = new FileOutputStream(KEYSTORE)) {
-                ks.store(fos, PASSWORD);
-            }
         } catch (Exception e) {
             throw new RuntimeException("Error to generate certificate: " + e.getMessage(), e);
         }
-    }
-
-    protected KeyStore loadKeyStore() throws IOException, GeneralSecurityException {
-        KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
-        try(InputStream ksStream = getClass().getResourceAsStream(KEYSTORE)) {
-            if (ksStream == null) {
-                throw new IOException("key store not found!");
-            }
-            ks.load(ksStream, PASSWORD);
-        }
-
-        return ks;
     }
 
     public static X509Certificate generateSelfSignedCertificate(KeyPair keyPair, String cn) throws Exception {
@@ -98,7 +91,7 @@ public class CertificateService {
 
     public void deleteAllCertificates() {
         try {
-            KeyStore ks = loadKeyStore();
+            KeyStore ks = ksManager.loadKeyStore();
             List<String> aliasesToDelete = new ArrayList<>();
             Enumeration<String> aliases = ks.aliases();
             
@@ -111,12 +104,27 @@ public class CertificateService {
                 ks.deleteEntry(alias);
             }
 
-            try (FileOutputStream fos = new FileOutputStream(KEYSTORE)) {
-                ks.store(fos, PASSWORD);
-            } 
+            ksManager.storeKeyStore(ks);
+
         } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException("Failed to delete certificates from keystore", e);
+        }
+    }
+
+    public String getCertificateByAlias(String alias) throws GeneralSecurityException, IOException {
+        KeyStore ks = ksManager.loadKeyStore();
+        Certificate cert = ks.getCertificate(alias);
+        if (cert == null) {
+            throw new IOException("Certificate not found for alias: " + alias);
+        }
+
+        // Convertendo o certificado para o formato PEM (Base64)
+        try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream()) {
+            byteArrayOutputStream.write("-----BEGIN CERTIFICATE-----\n".getBytes());
+            byteArrayOutputStream.write(Base64.getEncoder().encode(cert.getEncoded()));
+            byteArrayOutputStream.write("\n-----END CERTIFICATE-----\n".getBytes());
+            return byteArrayOutputStream.toString();
         }
     }
 }
