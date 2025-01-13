@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -38,12 +39,13 @@ public class PdfController {
     }
 
     @PostMapping("/signature")
-    public ResponseEntity<?> signPdf(@ModelAttribute SignPdfRequest request) {
+    public ResponseEntity<?> signPdf(@ModelAttribute SignPdfRequest request,
+                                     @RequestAttribute("user_id") String userId) {
         MultipartFile file = request.getFile();
         Float posX = request.getPosX();
         Float posY = request.getPosY();
         int pageNumber = request.getPageNumber();
-        String id = request.getId();
+        String id = userId;
         
         
         validateUploadedFile(file);

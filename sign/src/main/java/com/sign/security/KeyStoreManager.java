@@ -1,5 +1,6 @@
 package com.sign.security;
 
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
@@ -8,28 +9,31 @@ import java.security.KeyStore;
 import org.springframework.stereotype.Component;
 
 import java.io.InputStream;
-import java.io.OutputStream;
+import com.sign.utils.EnvConfig;
 
 @Component
 public class KeyStoreManager {
 
-    private static final String KEYSTORE = "/keystore/ks";
-    private static final char[] PASSWORD = "password".toCharArray();
+    private static final EnvConfig config = EnvConfig.getInstance();
+    
+    private static final String KEYSTORE = config.KEYSTORE;
+    private static final char[] PASSWORD = config.PASSWORD;
 
     public KeyStore loadKeyStore() throws GeneralSecurityException, IOException {
         KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
-        try (InputStream ksStream = KeyStoreManager.class.getResourceAsStream(KEYSTORE)) {
-            if (ksStream == null){
-                throw new IOException("Key Store not found");
-            }
-            ks.load(ksStream, PASSWORD);
+
+        try (FileInputStream fis = new FileInputStream(KEYSTORE)) {
+            ks.load(fis, PASSWORD);
+        } catch (IOException e) {
+            throw new IOException("Failed to load the KeyStore: " + e.getMessage(), e);
         }
+
         return ks;
     }
 
     public void storeKeyStore(KeyStore ks) throws GeneralSecurityException, IOException {
         
-        try (FileOutputStream fos = new FileOutputStream("/home/sidney/Documentos/UnB/UNBSIGN/UnBSign-API/sign/src/main/resources/keystore/ks")) {
+        try (FileOutputStream fos = new FileOutputStream(KEYSTORE)) {
                 ks.store(fos, PASSWORD);
         }
     }

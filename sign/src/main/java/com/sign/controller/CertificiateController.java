@@ -44,11 +44,9 @@ public class CertificiateController {
     @GetMapping("/certificate/{id}")
     public ResponseEntity<String> getCertificateById(@PathVariable String id) {
         try {
-            // Recuperando o certificado pelo alias gerado a partir do id
             String certificate = certificateService.getCertificateByAlias(id + "_cert");
             return ResponseEntity.ok(certificate);
         } catch (Exception e) {
-            // Retorna a mensagem de erro com o código de status 404 caso o certificado não seja encontrado
             return ResponseEntity.status(404).body("Failed to find certificate: " + e.getMessage());
         }
     }

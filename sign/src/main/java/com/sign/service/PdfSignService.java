@@ -55,7 +55,7 @@ public class PdfSignService {
         this.ksManager = ksManager;
     }
 
-    protected String getCNFromX509Certificate(X509Certificate cert) {
+    private String getCNFromX509Certificate(X509Certificate cert) {
         String subjectDN = cert.getSubjectX500Principal().getName();
         String[] parts = subjectDN.split(",");
         for (String part : parts) {
@@ -64,7 +64,7 @@ public class PdfSignService {
         return "Sem CN";
     }
 
-    protected void setAppearance(PdfSignatureAppearance appearance, String reason, String location, String certName) throws IOException, DocumentException {
+    private void setAppearance(PdfSignatureAppearance appearance, String reason, String location, String certName) throws IOException, DocumentException {
         appearance.setReason(reason);
         appearance.setLocation(location);
         appearance.setRenderingMode(PdfSignatureAppearance.RenderingMode.GRAPHIC_AND_DESCRIPTION);
