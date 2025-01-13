@@ -39,13 +39,13 @@ public class PdfController {
     }
 
     @PostMapping("/signature")
-    public ResponseEntity<?> signPdf(@ModelAttribute SignPdfRequest request,
-                                     @RequestAttribute("user_id") String userId) {
+    public ResponseEntity<?> signPdf(@ModelAttribute SignPdfRequest request
+                                     ) {
         MultipartFile file = request.getFile();
         Float posX = request.getPosX();
         Float posY = request.getPosY();
         int pageNumber = request.getPageNumber();
-        String id = userId;
+        String id = request.getId();
         
         
         validateUploadedFile(file);

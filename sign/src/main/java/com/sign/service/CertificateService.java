@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.io.ByteArrayOutputStream;
-import java.io.FileOutputStream;
 import java.security.*;
 import java.security.cert.X509Certificate;
 import java.security.cert.Certificate;
