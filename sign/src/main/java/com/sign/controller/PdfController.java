@@ -47,7 +47,6 @@ public class PdfController {
         int pageNumber = request.getPageNumber();
         String id = request.getId();
         
-        
         validateUploadedFile(file);
 
         try {

@@ -204,9 +204,9 @@ public class PdfSignService {
 
         KeyStore ks = ksManager.loadKeyStore();
         
-        String alias = id + "_cert";
+        String alias = id;
         X509Certificate cert = (X509Certificate) ks.getCertificate(alias);
-
+        
         if(cert == null){
             throw new GeneralSecurityException("User Certificate Not Found");
         }
