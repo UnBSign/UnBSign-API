@@ -10,17 +10,18 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestAttribute;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-
+import javax.servlet.http.HttpServletRequest;
 import com.itextpdf.text.DocumentException;
 import com.sign.service.FileService;
 import com.sign.service.PdfSignService;
 import com.sign.service.ResponseService;
 import com.sign.service.PdfValidateSignService;
 import com.sign.dto.SignPdfRequest;
+import com.sign.utils.JwtUtils;
 
 
 @RestController
@@ -39,32 +40,45 @@ public class PdfController {
     }
 
     @PostMapping("/signature")
-    public ResponseEntity<?> signPdf(@ModelAttribute SignPdfRequest request
-                                     ) {
+    public ResponseEntity<?> signPdf(
+        @ModelAttribute SignPdfRequest request,
+        @RequestHeader(value = "Authorization", required = false) String authorizationHeader
+        ) {
         MultipartFile file = request.getFile();
         Float posX = request.getPosX();
         Float posY = request.getPosY();
         int pageNumber = request.getPageNumber();
-        String id = request.getId();
-        
-        validateUploadedFile(file);
+        // String id = request.getId();
+        System.out.println(authorizationHeader);
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            String token = authorizationHeader.substring(7);
+            
+            String id= JwtUtils.extractUserId(token);
+            System.out.println("User ID: " + id);
 
-        try {
-            String tempFilePath = fileService.saveTempFile(file);
+            validateUploadedFile(file);
 
-            String signedFilePath = fileService.getSignedFilePath(file.getOriginalFilename());
-            pdfSignService.executeSign(tempFilePath, signedFilePath, id, pageNumber, posX, posY);
+            try {
+                String tempFilePath = fileService.saveTempFile(file);
 
-            return responseService.createFileResponse(signedFilePath);
+                String signedFilePath = fileService.getSignedFilePath(file.getOriginalFilename());
+                pdfSignService.executeSign(tempFilePath, signedFilePath, id, pageNumber, posX, posY);
 
-        } catch(IllegalArgumentException e){ 
-            return ResponseEntity.badRequest().body(e.getMessage());
-        } catch (IOException | GeneralSecurityException | DocumentException e) {
-            if (e.getMessage().equals("User Certificate Not Found")) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Certificado do usuário não encontrado");
+                return responseService.createFileResponse(signedFilePath);
+
+            } catch(IllegalArgumentException e){ 
+                return ResponseEntity.badRequest().body(e.getMessage());
+            } catch (IOException | GeneralSecurityException | DocumentException e) {
+                if (e.getMessage().equals("User Certificate Not Found")) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Certificado do usuário não encontrado");
+                }
+                return ResponseEntity.internalServerError().body("Error to sign file: " + e.getMessage());
             }
-            return ResponseEntity.internalServerError().body("Error to sign file: " + e.getMessage());
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token not provided");
         }
+
+        
     }
 
     @PostMapping("/validation")
