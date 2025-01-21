@@ -54,9 +54,6 @@ public class CertificateService {
         PublicKey publicKey = keyPair.getPublic();
         privateKeyForCsr = keyPair.getPrivate();
 
-
-        //savePrivateKey(id, privateKeyForCsr);
-
         PKCS10CertificationRequest csr = generateCsr(privateKeyForCsr, publicKey, commonName);
 
         //saveCsrToFile(csr, id);
@@ -83,26 +80,6 @@ public class CertificateService {
 
         return csr;
     }
-
-    // private void savePrivateKey(String alias, PrivateKey privateKey) throws Exception {
-    //     String directory = "/home/sidney/Documentos/UnB/UNBSIGN/UnBSign-API/sign/private";
-
-    //     File dir = new File(directory);
-
-    //     String fileName = alias + ".key";
-    //     File privateKeyFile = new File(directory, fileName);
-
-    //     // Converte a chave privada para o formato PEM (Base64)
-    //     String privateKeyPem = "-----BEGIN PRIVATE KEY-----\n" 
-    //             + Base64.getEncoder().encodeToString(privateKey.getEncoded()) 
-    //             + "\n-----END PRIVATE KEY-----";
-        
-    //     try (FileOutputStream fos = new FileOutputStream(privateKeyFile)) {
-    //     fos.write(privateKeyPem.getBytes());
-    //     } catch (IOException e) {
-    //         throw new IOException("Error writing private key to file: " + privateKeyFile.getAbsolutePath(), e);
-    //     }       
-    // }
 
     private void saveCsrToFile(PKCS10CertificationRequest csr, String id) throws IOException {
         Path csrDirectory = Paths.get("certs/csr");
@@ -216,7 +193,6 @@ public class CertificateService {
             throw new IOException("Certificate not found for alias: " + alias);
         }
 
-        // Convertendo o certificado para o formato PEM (Base64)
         try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream()) {
             byteArrayOutputStream.write("-----BEGIN CERTIFICATE-----\n".getBytes());
             byteArrayOutputStream.write(Base64.getEncoder().encode(cert.getEncoded()));

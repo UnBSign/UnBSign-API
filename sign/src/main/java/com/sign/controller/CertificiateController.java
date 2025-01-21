@@ -52,7 +52,7 @@ public class CertificiateController {
     @GetMapping("/certificate/{id}")
     public ResponseEntity<String> getCertificateById(@PathVariable String id) {
         try {
-            String certificate = certificateService.getCertificateByAlias(id + "_cert");
+            String certificate = certificateService.getCertificateByAlias(id);
             return ResponseEntity.ok(certificate);
         } catch (Exception e) {
             return ResponseEntity.status(404).body("Failed to find certificate: " + e.getMessage());
