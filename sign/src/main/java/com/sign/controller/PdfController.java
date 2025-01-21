@@ -8,19 +8,23 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestAttribute;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-
+import javax.servlet.http.HttpServletRequest;
 import com.itextpdf.text.DocumentException;
 import com.sign.service.FileService;
 import com.sign.service.PdfSignService;
 import com.sign.service.ResponseService;
 import com.sign.service.PdfValidateSignService;
 import com.sign.dto.SignPdfRequest;
+import com.sign.utils.JwtUtils;
 
 
 @RestController
@@ -37,18 +41,19 @@ public class PdfController {
         this.responseService = responseService;
         this.pdfSignService = pdfSignService;
     }
+    
 
     @PostMapping("/signature")
-    public ResponseEntity<?> signPdf(@ModelAttribute SignPdfRequest request
-                                     ) {
+    public ResponseEntity<?> signPdf(
+        @ModelAttribute SignPdfRequest request
+        ) {
         MultipartFile file = request.getFile();
         Float posX = request.getPosX();
         Float posY = request.getPosY();
         int pageNumber = request.getPageNumber();
-        String id = request.getId();
         
-        
-        validateUploadedFile(file);
+        String id = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        responseService.validateUploadedFile(file);
 
         try {
             String tempFilePath = fileService.saveTempFile(file);
@@ -65,13 +70,13 @@ public class PdfController {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Certificado do usuário não encontrado");
             }
             return ResponseEntity.internalServerError().body("Error to sign file: " + e.getMessage());
-        }
+        }  
     }
 
     @PostMapping("/validation")
     public ResponseEntity<?> validatePdfSignature(@ModelAttribute SignPdfRequest request) {
         MultipartFile file = request.getFile();
-        validateUploadedFile(file);
+        responseService.validateUploadedFile(file);
 
         try {
             String tempFilePath = fileService.saveTempFile(file);
@@ -86,18 +91,6 @@ public class PdfController {
         } catch (IOException e) {
             return ResponseEntity.internalServerError().body("Error validating file: " + e.getMessage());
         }
-    }
-
-    private ResponseEntity<?> validateUploadedFile (MultipartFile file){
-        if (file == null || file.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("File is missing or empty");
-        }
-
-        if (!"application/pdf".equals(file.getContentType())){
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid file type, only PDF files are supported");
-        }
-
-        return null;
     }
     
 }

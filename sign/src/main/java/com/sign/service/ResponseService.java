@@ -11,6 +11,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class ResponseService {
@@ -47,6 +48,18 @@ public class ResponseService {
         );
 
         return ResponseEntity.ok(response);
+    }
+
+    public ResponseEntity<?> validateUploadedFile (MultipartFile file){
+        if (file == null || file.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("File is missing or empty");
+        }
+
+        if (!"application/pdf".equals(file.getContentType())){
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid file type, only PDF files are supported");
+        }
+
+        return null;
     }
 }
 
