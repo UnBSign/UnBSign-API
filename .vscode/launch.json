@@ -2,6 +2,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "DigitalSignatureCheck",
+            "request": "launch",
+            "mainClass": "com.sign.service.DigitalSignatureCheck",
+            "projectName": "sign"
+        },
+        {
+            "type": "java",
             "name": "Spring Boot-SignApplication<sign>",
             "request": "launch",
             "cwd": "${workspaceFolder}",

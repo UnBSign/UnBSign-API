@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  unbsign-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: unbsign-api
+    network_mode: host
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./sign/keystore:/app/keystore

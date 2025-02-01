@@ -9,7 +9,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class FileService {
-    // salva arquivo temporariamente
     public String saveTempFile(MultipartFile file) throws IOException {
         File tempFile = File.createTempFile("uploaded-", ".pdf");
         try (FileOutputStream fos = new FileOutputStream(tempFile)) {
@@ -18,7 +17,6 @@ public class FileService {
         return tempFile.getAbsolutePath();
     }
 
-    //caminho do arquivo assinado
     public String getSignedFilePath(String fileName) {
 
         String extension = "";
@@ -33,4 +31,6 @@ public class FileService {
         File tempDir = new File(System.getProperty("java.io.tmpdir"));
         return new File(tempDir, fileName + "_assinado" + extension).getAbsolutePath();
     }
+
+    
 }
