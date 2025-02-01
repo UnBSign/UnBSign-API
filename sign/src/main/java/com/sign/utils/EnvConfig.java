@@ -8,12 +8,14 @@ public class EnvConfig {
 
     public final String KEYSTORE;
     public final char[] PASSWORD;
+    public final String SECRET_KEY;
 
     private EnvConfig() {
         dotenv = Dotenv.configure().load();
 
         KEYSTORE = dotenv.get("KEYSTORE");
         PASSWORD = dotenv.get("PASSWORD").toCharArray();
+        SECRET_KEY = dotenv.get("SECRET_KEY");
     }
 
     public static EnvConfig getInstance() {
