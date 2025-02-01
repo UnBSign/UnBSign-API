@@ -54,8 +54,6 @@ public class CertificateService {
     }
 
     public String createCsr(String id, String commonName) throws Exception {
-        KeyStore ks = ksManager.loadKeyStore();
-
 
         KeyPair keyPair = generateRsaKeyPair();
 
@@ -108,7 +106,9 @@ public class CertificateService {
 
         try {
             KeyPair keyPair = generateRsaKeyPair();
+            privateKeyForCsr = keyPair.getPrivate();
             X509Certificate certificate = generateSelfSignedCertificate(keyPair, cn);
+            
             storeCertificate(id, certificate);
 
         } catch (Exception e) {
@@ -119,13 +119,6 @@ public class CertificateService {
     public String processAndStore(String id, String signedCertContent) throws RuntimeException {
         try {
             X509Certificate signedCertificate = convertPemToX509Certificate(signedCertContent);
-    
-            // KeyStore ks = ksManager.loadKeyStore();
-            // PrivateKey privateKey = (PrivateKey) ks.getKey(id, PASSWORD);
-            
-            // if (privateKey == null) {
-            //     throw new RuntimeException("Private key not found for alias: " + id);
-            // }
     
             storeCertificate(id, signedCertificate);
     
