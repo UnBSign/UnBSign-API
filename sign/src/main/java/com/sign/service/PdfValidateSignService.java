@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.KeyFactory;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.Signature;
 import java.security.spec.X509EncodedKeySpec;
@@ -18,6 +19,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Date;
 import java.util.List;
+import java.io.InputStream;
+import java.io.OutputStream;
+
+import java.net.HttpURLConnection;
+import java.net.URL;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -36,66 +43,68 @@ import java.io.IOException;
 
 import org.springframework.stereotype.Service;
 
+
 @Service
 public class PdfValidateSignService{
-
+    private final String apiUrl = "http://localhost:8081/api/pki/certificates/validate";
+    
     File pdfFile;
 
     Logger logApp=LoggerFactory.getLogger(PdfValidateSignService.class);
     
-    private String getCNFromCertificate(X509CertificateHolder certificateHolder) {
-        String subjectDN = certificateHolder.getSubject().toString();
-        String[] parts = subjectDN.split(",");
-        for (String part : parts) {
-            if (part.trim().startsWith("CN=")) {
-                return part.trim().substring(3);
-            }
-        }
-        return "Sem CN";
-    }
 
-    private  byte[] getByteRangeData(ByteArrayInputStream bis,int[] byteRange)    {
-        int length1=byteRange[1]+byteRange[3];
-        byte[] contentSigned=new byte[length1];
-        bis.skip(byteRange[0]);
-        bis.read(contentSigned, 0, byteRange[1]);
-        bis.skip(byteRange[2]-byteRange[1]-byteRange[0]);
-        bis.read(contentSigned, byteRange[1], byteRange[3]);
-        bis.reset();
-        return contentSigned;
-
-    }
-
-    public List<Map<String, Object>> validateSignature(String filePath) throws IOException {
+    public Map<String, Object> validateSignature(String filePath) throws IOException {
         PDDocument pdfDoc = null;
         List<Map<String, Object>> signatureInfos = new ArrayList<>();
+        List<String> serialNumbers = new ArrayList<>();
+        String documentHash = getDocumentHash(filePath);
+        boolean allSignaturesRecognized = true;
         try {
-            ByteArrayInputStream pdfBytes = new ByteArrayInputStream(
-                    Files.readAllBytes(Paths.get(filePath)));
-
+            ByteArrayInputStream pdfBytes = new ByteArrayInputStream(Files.readAllBytes(Paths.get(filePath)));
             pdfDoc = PDDocument.load(new File(filePath));
-
-            pdfDoc.getSignatureDictionaries().forEach(signature -> {
+            
+            for (PDSignature signature : pdfDoc.getSignatureDictionaries()) {
                 try {
                     Map<String, Object> signatureInfo = processSignature(signature, pdfBytes);
                     if (signatureInfo != null) {
                         signatureInfos.add(signatureInfo);
+                        if (signatureInfo.containsKey("SerialNumber")) {
+                            serialNumbers.add((String) signatureInfo.get("SerialNumber"));
+                        }
                     }
-                    
                 } catch (Exception e) {
-                    logApp.error("Error processing Signature", e);
+                    logApp.error("Error processing Signature: {}", e.getMessage());
                     signatureInfos.add(Collections.singletonMap("Signature ID", false));
                 }
-            });
-
+            }
             pdfBytes.close();
+    
             
+            if (!serialNumbers.isEmpty()) {
+                Map<String, Boolean> pkiResponse = validateCertificatesWithPKI(serialNumbers);
+                for (Map<String, Object> signatureInfo : signatureInfos) {
+                    String serialNumber = (String) signatureInfo.get("SerialNumber");
+                    boolean recognized = pkiResponse.getOrDefault(serialNumber, false);
+                    signatureInfo.put("PKIRecognized", recognized);
+                    
+                    if (!recognized) {
+                        allSignaturesRecognized = false;
+                    }
+                }
+            }
         } finally {
             if (pdfDoc != null) {
                 pdfDoc.close();
             }
         }
-        return signatureInfos;
+    
+        Map<String, Object> result = new HashMap<>();
+        result.put("DocumentHash", documentHash);
+        result.put("Signatures", signatureInfos);
+        result.put("AllSignaturesRecognized", allSignaturesRecognized);
+        System.out.println("Resultado: ");
+        System.out.println(result);
+        return result;
     }
 
     private Map<String, Object> processSignature(PDSignature signature,
@@ -235,5 +244,66 @@ public class PdfValidateSignService{
 
         return signatureData;
 
+    }
+
+    private String getCNFromCertificate(X509CertificateHolder certificateHolder) {
+        String subjectDN = certificateHolder.getSubject().toString();
+        String[] parts = subjectDN.split(",");
+        for (String part : parts) {
+            if (part.trim().startsWith("CN=")) {
+                return part.trim().substring(3);
+            }
+        }
+        return "Sem CN";
+    }
+
+    private  byte[] getByteRangeData(ByteArrayInputStream bis,int[] byteRange)    {
+        int length1=byteRange[1]+byteRange[3];
+        byte[] contentSigned=new byte[length1];
+        bis.skip(byteRange[0]);
+        bis.read(contentSigned, 0, byteRange[1]);
+        bis.skip(byteRange[2]-byteRange[1]-byteRange[0]);
+        bis.read(contentSigned, byteRange[1], byteRange[3]);
+        bis.reset();
+        return contentSigned;
+
+    }
+
+    private Map<String, Boolean> validateCertificatesWithPKI(List<String> serialNumbers) throws IOException {
+        
+        ObjectMapper objectMapper = new ObjectMapper();
+        Map<String, Object> requestPayload = new HashMap<>();
+        requestPayload.put("serialNumbers", serialNumbers);
+        
+        URL url = new URL(apiUrl);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("POST");
+        connection.setRequestProperty("Content-Type", "application/json");
+        connection.setDoOutput(true);
+        
+        try (OutputStream os = connection.getOutputStream()) {
+            byte[] input = objectMapper.writeValueAsBytes(requestPayload);
+            os.write(input, 0, input.length);
+        }
+        
+        Map<String, Boolean> responseMap = new HashMap<>();
+        if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+            try (InputStream is = connection.getInputStream()) {
+                responseMap = objectMapper.readValue(is, Map.class);
+            }
+        }
+        connection.disconnect();
+        return responseMap;
+    }
+
+    private String getDocumentHash(String filePath) {
+        try {
+            byte[] fileBytes = Files.readAllBytes(Paths.get(filePath));
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(fileBytes);
+            return Base64.getEncoder().encodeToString(hash);
+        } catch (NoSuchAlgorithmException | IOException e) {
+            return "Unable to obtain hash with SHA-256.";
+        }
     }
 }

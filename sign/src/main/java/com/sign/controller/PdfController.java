@@ -82,7 +82,7 @@ public class PdfController {
             String tempFilePath = fileService.saveTempFile(file);
             PdfValidateSignService service = new PdfValidateSignService();
 
-            List<Map<String, Object>> signaturesResults = service.validateSignature(tempFilePath);
+            Map<String, Object> signaturesResults = service.validateSignature(tempFilePath);
         
             return responseService.createValidationResponse(signaturesResults);
 

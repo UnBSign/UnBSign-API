@@ -39,14 +39,21 @@ public class ResponseService {
                 .body(resource);
     }
 
-    public ResponseEntity<Map<String, Object>> createValidationResponse(List<Map<String, Object>> signaturesResults) {
-        boolean allValid = signaturesResults.stream().allMatch(result -> (boolean) result.get("Integrity"));
-
+    public ResponseEntity<Map<String, Object>> createValidationResponse(Map<String, Object> signaturesResults) {
+        List<Map<String, Object>> signatures = (List<Map<String, Object>>) signaturesResults.get("Signatures");
+        boolean allSignatureRecognized = Boolean.TRUE.equals(signaturesResults.get("AllSignaturesRecognized"));
+        String documentHash = (String) signaturesResults.get("DocumentHash");
+        
+        boolean allValid = signatures.stream()
+                                      .allMatch(signature -> Boolean.TRUE.equals(signature.get("Integrity")));
+        
         Map<String, Object> response = Map.of(
-            "success", allValid,
-            "signatures", signaturesResults
-        );
-
+                "success", allValid,  
+                "signatures", signatures,
+                "documentHash", documentHash,
+                "allSignatureRecognized", allSignatureRecognized
+            );
+        
         return ResponseEntity.ok(response);
     }
 

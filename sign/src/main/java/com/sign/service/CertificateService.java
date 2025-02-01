@@ -8,7 +8,13 @@ import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.bouncycastle.pkcs.PKCS10CertificationRequestBuilder;
 import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.RequestEntity;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
 import java.io.BufferedWriter;
@@ -40,6 +46,8 @@ public class CertificateService {
     private final KeyStoreManager ksManager;
     private static final char[] PASSWORD = "password".toCharArray();
     private PrivateKey privateKeyForCsr;
+
+    private static final String REMOTE_SIGNATURE_URL = "http://localhost:8081/api/pki/certificates/signature";
 
     public CertificateService(KeyStoreManager ksManager) {
         this.ksManager = ksManager;
@@ -229,5 +237,28 @@ public class CertificateService {
         ByteArrayInputStream inputStream = new ByteArrayInputStream(decoded);
         
         return (X509Certificate) certFactory.generateCertificate(inputStream);
+    }
+
+    public ResponseEntity<String> PkiSignCertificate(MultiValueMap<String, String> body, String id) {
+        RestTemplate restTemplate = new RestTemplate();
+        RequestEntity<MultiValueMap<String, String>> requestEntity = RequestEntity
+            .post(REMOTE_SIGNATURE_URL)
+            .header(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .body(body);
+        
+        ResponseEntity<String> response = restTemplate.exchange(requestEntity, String.class);
+        
+        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+            try {
+                String result = processAndStore(id, response.getBody());
+                return ResponseEntity.ok(result);
+            } catch (Exception e) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("Error storing the signed certificate: " + e.getMessage());
+            }
+        } else {
+            return ResponseEntity.status(response.getStatusCode())
+                    .body("Failed to sign certificate. Response: " + response.getBody());
+        }
     }
 }

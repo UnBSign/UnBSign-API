@@ -18,15 +18,4 @@ public class TestController {
         return "Hello, " + name + "! POST request was successful!";
     }
 
-    @GetMapping("/userid")
-    public String testEndpoint() {
-        // Recupera o userId da requisição
-        String userId = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-
-        if (userId == null) {
-            return "User ID not found!";
-        }
-
-        return "User ID: " + userId;
-    }
 }
