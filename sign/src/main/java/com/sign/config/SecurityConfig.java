@@ -33,6 +33,7 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults())    
             .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/pdf/validation").permitAll()
+                        .requestMatchers("/api/test**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
