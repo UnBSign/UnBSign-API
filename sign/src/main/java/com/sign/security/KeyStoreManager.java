@@ -8,7 +8,6 @@ import java.security.KeyStore;
 
 import org.springframework.stereotype.Component;
 
-import java.io.InputStream;
 import com.sign.utils.EnvConfig;
 
 @Component
