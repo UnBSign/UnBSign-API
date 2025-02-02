@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.FileOutputStream;
 import java.security.*;
 import java.security.cert.X509Certificate;
 import java.security.cert.Certificate;
