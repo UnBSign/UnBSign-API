@@ -231,7 +231,7 @@ public class CertificateService {
         return (X509Certificate) certFactory.generateCertificate(inputStream);
     }
 
-    public ResponseEntity<String> PkiSignCertificate(MultiValueMap<String, String> body, String id) {
+    public ResponseEntity<String> pkiSignCertificate(MultiValueMap<String, String> body, String id) {
         RestTemplate restTemplate = new RestTemplate();
         RequestEntity<MultiValueMap<String, String>> requestEntity = RequestEntity
             .post(REMOTE_SIGNATURE_URL)

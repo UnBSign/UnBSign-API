@@ -129,10 +129,10 @@ curl -X POST "http://localhost:8080/api/validation" \
 ```
 
 ## 3. Endpoint: Geração de Certificado Digital Autoassinado
-### **POST** `/api/certificates/generateSelfSigned`
+### **POST** `/api/certificates/generate-self-signed`
 
 ### **Requisição**
-- **URL:** `/api/certificates/generateSelfSigned`
+- **URL:** `/api/certificates/generate-self-signed`
 - **Método:** POST
 - **Cabeçalhos:**
 - `Content-Type: application/json`
@@ -142,7 +142,7 @@ curl -X POST "http://localhost:8080/api/validation" \
 
 ### **Exemplo de Requisição**
 ```bash
-curl -X POST "http://localhost:8080/api/certificates/generateSelfSigned" \
+curl -X POST "http://localhost:8080/api/certificates/generate-self-signed" \
 -H "Content-Type: application/json" \
 -d '{"id": "user123", "cn": "John Doe"}'
 

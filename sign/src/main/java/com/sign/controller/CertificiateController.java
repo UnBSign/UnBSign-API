@@ -24,7 +24,7 @@ public class CertificiateController {
     @Autowired
     private CertificateService certificateService;
     
-    @PostMapping("/generateSelfSigned")
+    @PostMapping("/generate-self-signed")
     public String generateCertificate(@RequestBody CertificateRequest request) {
 
         certificateService.createAndStoreCertificate(request.getId(), request.getCn());
@@ -63,7 +63,7 @@ public class CertificiateController {
         body.add("csr", csrContent);
         body.add("commonName", cn);
 
-        return certificateService.PkiSignCertificate(body, id);   
+        return certificateService.pkiSignCertificate(body, id);   
     }
     
 }
