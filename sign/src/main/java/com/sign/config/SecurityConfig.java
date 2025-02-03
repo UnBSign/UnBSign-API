@@ -32,8 +32,14 @@ public class SecurityConfig {
         http.csrf(csrf -> csrf.disable())
             .cors(Customizer.withDefaults())    
             .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/pdf/validation").permitAll()
-                        .requestMatchers("/api/test**").permitAll()
+                        .requestMatchers(
+                            "/swagger-ui/**",   // Swagger UI
+                            "/swagger-ui.html", // Página principal do Swagger
+                            "/v3/api-docs/**",  // OpenAPI JSON/YAML
+                            "/api-docs/**",      // Documentação da API
+                            "/api/pdf/validation",
+                            "/api/test**"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session

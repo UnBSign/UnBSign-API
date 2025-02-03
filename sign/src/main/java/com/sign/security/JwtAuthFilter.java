@@ -55,8 +55,11 @@ public class JwtAuthFilter extends OncePerRequestFilter{
 
         List<String> publicUrls = List.of(
                 "/api/test**",
+                "/api/pdf/validation",
                 "/swagger-ui/**",
-                "/api/pdf/validation"
+                "/swagger-ui.html",
+                "/v3/api-docs/**",
+                "/api-docs/**"
         );
 
 

@@ -36,4 +36,4 @@ build/
 scripts
 
 ##keystore##
-**/keystore/
+sign/keystore

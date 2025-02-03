@@ -53,16 +53,20 @@ public class CertificateService {
     }
 
     public String createCsr(String id, String commonName) throws Exception {
-
+        if (commonName == null || commonName.trim().isEmpty()) {
+            throw new IllegalArgumentException("CN is null or empty");
+        }
+        else if(id == null || id.isEmpty()) {
+            throw new IllegalArgumentException("ID is null or empty");
+        }
+    
         KeyPair keyPair = generateRsaKeyPair();
-
+    
         PublicKey publicKey = keyPair.getPublic();
         privateKeyForCsr = keyPair.getPrivate();
-
+    
         PKCS10CertificationRequest csr = generateCsr(privateKeyForCsr, publicKey, commonName);
-
-        //saveCsrToFile(csr, id);
-
+    
         try (ByteArrayOutputStream csrOut = new ByteArrayOutputStream()) {
             csrOut.write("-----BEGIN CERTIFICATE REQUEST-----\n".getBytes());
             csrOut.write(Base64.getEncoder().encode(csr.getEncoded()));
@@ -70,7 +74,6 @@ public class CertificateService {
     
             return csrOut.toString();
         }
-
     }
 
     private PKCS10CertificationRequest generateCsr(PrivateKey privateKey, PublicKey publicKey, String commonName) throws Exception{

@@ -18,6 +18,13 @@ payload = {
 
 # Documentação dos Endpoints
 
+## Documentação Swagger
+
+Após rodar o seu projeto, o Swagger estará acessível no seguinte endereço:
+
+```http://localhost:8080/swagger-ui/index.html```
+
+
 ## 1. Endpoint: Assinatura de PDF
 ### **POST** `/api/pdf/signature`
 
