@@ -6,8 +6,13 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: unbsign-api
-    network_mode: host
     ports:
       - "8080:8080"
     volumes:
       - ./sign/keystore:/app/keystore
+    networks:
+      - unbsign-webapp_unbsign-network
+
+networks:
+  unbsign-webapp_unbsign-network:
+    external: true

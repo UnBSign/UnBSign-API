@@ -25,7 +25,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
+import com.sign.utils.EnvConfig;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.PDSignature;
@@ -46,7 +46,11 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class PdfValidateSignService{
-    private final String apiUrl = "http://localhost:8081/api/pki/certificates/validate";
+
+    private static final EnvConfig config = EnvConfig.getInstance();
+    private static final String API_PKI = config.API_PKI;
+
+    private final String apiUrl = API_PKI + "/certificates/validate";
     
     File pdfFile;
 
@@ -272,7 +276,6 @@ public class PdfValidateSignService{
         ObjectMapper objectMapper = new ObjectMapper();
         Map<String, Object> requestPayload = new HashMap<>();
         requestPayload.put("serialNumbers", serialNumbers);
-        
         URL url = new URL(apiUrl);
         HttpURLConnection connection = (HttpURLConnection) url.openConnection();
         connection.setRequestMethod("POST");

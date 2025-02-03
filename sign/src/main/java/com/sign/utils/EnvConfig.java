@@ -9,6 +9,7 @@ public class EnvConfig {
     public final String KEYSTORE;
     public final char[] PASSWORD;
     public final String SECRET_KEY;
+    public final String API_PKI;
 
     private EnvConfig() {
         dotenv = Dotenv.configure().load();
@@ -16,6 +17,7 @@ public class EnvConfig {
         KEYSTORE = dotenv.get("KEYSTORE");
         PASSWORD = dotenv.get("PASSWORD").toCharArray();
         SECRET_KEY = dotenv.get("SECRET_KEY");
+        API_PKI = dotenv.get("API_PKI");
     }
 
     public static EnvConfig getInstance() {

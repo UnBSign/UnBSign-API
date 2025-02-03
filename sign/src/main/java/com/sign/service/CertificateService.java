@@ -37,16 +37,20 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.Path;
 import java.security.cert.CertificateFactory;
-import java.io.File;
+import com.sign.utils.EnvConfig;
 
 @Service
 public class CertificateService {
+    private static final EnvConfig config = EnvConfig.getInstance();
+    private static final String API_PKI = config.API_PKI;
 
     private final KeyStoreManager ksManager;
     private static final char[] PASSWORD = "password".toCharArray();
+    
+
     private PrivateKey privateKeyForCsr;
 
-    private static final String REMOTE_SIGNATURE_URL = "http://localhost:8081/api/pki/certificates/signature";
+    private static final String REMOTE_SIGNATURE_URL = API_PKI + "/certificates/signature";
 
     public CertificateService(KeyStoreManager ksManager) {
         this.ksManager = ksManager;
