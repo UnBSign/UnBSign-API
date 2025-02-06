@@ -151,12 +151,12 @@ public class CertificateService {
         SubjectPublicKeyInfo publicKeyInfo = SubjectPublicKeyInfo.getInstance(publicKey.getEncoded());
 
         X509v3CertificateBuilder certBuilder = new X509v3CertificateBuilder(
-                issuer,          // Emissor
-                serial,          // Número de série
-                notBefore,       // Data de início da validade
-                notAfter,        // Data de expiração
-                subject,         // Sujeito
-                publicKeyInfo    // Informação da chave pública
+                issuer,
+                serial,
+                notBefore,
+                notAfter,
+                subject,
+                publicKeyInfo
         );
 
         ContentSigner signer = new JcaContentSignerBuilder("SHA256withRSA").build(privateKey);
