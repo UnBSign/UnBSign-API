@@ -106,6 +106,7 @@ public class PdfValidateSignService{
         result.put("DocumentHash", documentHash);
         result.put("Signatures", signatureInfos);
         result.put("AllSignaturesRecognized", allSignaturesRecognized);
+        logApp.info("Sending response {}", result);
         return result;
     }
 

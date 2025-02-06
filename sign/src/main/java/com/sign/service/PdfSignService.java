@@ -45,7 +45,6 @@ public class PdfSignService {
     private static final int MAX_LOGO_WIDTH = 200;
     private static final int MAX_LOGO_HEIGHT = 50;
     private static final Font TEXT_FONT = new Font(Font.FontFamily.TIMES_ROMAN, 8);
-    private static String SIGN_DATE = (new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date()));
 
     TreeSet<Float> yList;
 
@@ -65,12 +64,13 @@ public class PdfSignService {
     }
 
     private void setAppearance(PdfSignatureAppearance appearance, String reason, String location, String certName) throws IOException, DocumentException {
+        String signDate = (new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date()));
         appearance.setReason(reason);
         appearance.setLocation(location);
         appearance.setRenderingMode(PdfSignatureAppearance.RenderingMode.GRAPHIC_AND_DESCRIPTION);
         appearance.setLayer2Font(TEXT_FONT);
 
-        String signatureText = "Assinado digitalmente por: \n" + certName + "\nUniversidade de Brasília\nData: " + SIGN_DATE;
+        String signatureText = "Assinado digitalmente por: \n" + certName + "\nUniversidade de Brasília\nData: " + signDate;
 
         appearance.setLayer2Text(signatureText);
         addLogoToAppearance(appearance);

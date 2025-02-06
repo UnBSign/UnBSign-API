@@ -12,6 +12,8 @@ services:
       - ./sign/keystore:/app/keystore
     networks:
       - unbsign-webapp_unbsign-network
+    environment:
+      - TZ=America/Sao_Paulo
 
 networks:
   unbsign-webapp_unbsign-network:
