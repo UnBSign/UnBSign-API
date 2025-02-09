@@ -44,9 +44,6 @@ public class SecurityConfig {
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .formLogin(formLogin -> formLogin.disable())
-            .httpBasic(httpBasic -> httpBasic.disable())
-            .logout(logout -> logout.disable())
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
@@ -55,12 +52,21 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of("*"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(List.of("GET", "POST"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(false);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
+        
+        // Configuração de CORS restrita para /api/certificates/**
+        CorsConfiguration certificatesConfig = new CorsConfiguration();
+        certificatesConfig.setAllowedOrigins(List.of("http://localhost"));  // Permitir apenas localhost
+        certificatesConfig.setAllowedMethods(List.of("GET", "POST", "DELETE"));
+        certificatesConfig.setAllowedHeaders(List.of("*"));
+        certificatesConfig.setAllowCredentials(true);
+        source.registerCorsConfiguration("/api/certificates/**", certificatesConfig);
+
         return source;
     }
 }
