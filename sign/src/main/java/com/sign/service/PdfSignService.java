@@ -13,6 +13,8 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TreeSet;
 import java.util.List;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
@@ -34,6 +36,8 @@ import com.itextpdf.text.pdf.security.ExternalSignature;
 import com.itextpdf.text.pdf.security.MakeSignature;
 import com.itextpdf.text.pdf.security.MakeSignature.CryptoStandard;
 import com.itextpdf.text.pdf.security.PrivateKeySignature;
+import com.itextpdf.text.pdf.security.SignaturePolicyInfo;
+
 import org.springframework.stereotype.Service;
 
 import com.sign.security.KeyStoreManager;
@@ -159,6 +163,15 @@ public class PdfSignService {
         return "sig" + (maxIndex + 1);
     }
 
+    private SignaturePolicyInfo generateSignaturePolicy() throws NoSuchAlgorithmException {
+        
+        String policyIdentifier = "2.16.76.1.5.1.1.1";
+        byte[] policyHash = MessageDigest.getInstance("SHA-256").digest("PolicyContent".getBytes());
+        String policyDigestAlgorithm = "SHA-256";
+        String policyUrl = "https://www.unbsign/UnbSign-API/acraiz";
+        return new SignaturePolicyInfo(policyIdentifier, policyHash, policyDigestAlgorithm, policyUrl);
+    }
+
     protected void sign(String src, String dest, Certificate[] chain,
                       PrivateKey pk, String digestAlgorithm, String provider,
                       CryptoStandard subFilter, String reason, String location, String certName, Integer pageNumber, Float posX, Float posY)
@@ -190,7 +203,9 @@ public class PdfSignService {
                     ExternalDigest digest = new BouncyCastleDigest();
                     ExternalSignature signature = new PrivateKeySignature(pk, digestAlgorithm, provider);
 
-                    MakeSignature.signDetached(appearance, digest, signature, chain, null, null, null, 0, subFilter);
+                    SignaturePolicyInfo spi = generateSignaturePolicy();
+
+                    MakeSignature.signDetached(appearance, digest, signature, chain, null, null, null, 0, subFilter, spi);
                 }
 
                 
